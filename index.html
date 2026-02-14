@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appello RD Academy</title>
+    <title>Appello allenamento Sabato</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --bg-color: #fdfcf0; 
-            --primary: #d1d9ff;  --secondary: #ffd8be; 
-            --accent: #c1e1c1;   --import: #f9f1c2;    
-            --danger: #ffb3ba;   --text: #5a5a5a;
+            --primary: #d1d9ff;  
+            --accent: #c1e1c1;   
+            --import: #f9f1c2;    
+            --danger: #000000; /* X Nera */
+            --text: #5a5a5a;
         }
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color); color: var(--text);
             margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
         }
+        h1 { color: #8a96d7; font-weight: 300; margin-bottom: 25px; }
+
         .controls {
             background: white; padding: 20px; border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
@@ -28,7 +32,7 @@
         .btn-add { background-color: var(--primary); }
         .btn-import { background-color: var(--import); }
         .btn-export { background-color: var(--accent); }
-        .btn-clear { background-color: var(--danger); }
+        .btn-clear { background-color: #ffb3ba; } /* Reset rimane rosino chiaro per sicurezza */
         
         #searchBar { width: 100%; max-width: 400px; margin-bottom: 20px; border: 2px solid var(--primary); }
 
@@ -43,21 +47,22 @@
         }
         .card.present { border-color: var(--accent); background-color: #f0fff0; }
         
+        /* X Nera per eliminare */
         .delete-btn {
-            position: absolute; top: 5px; right: 5px;
+            position: absolute; top: 8px; right: 8px;
             background: var(--danger); color: white;
-            border-radius: 50%; width: 22px; height: 22px;
-            font-size: 12px; cursor: pointer; border: none; z-index: 10;
+            border-radius: 50%; width: 20px; height: 20px;
+            font-size: 11px; cursor: pointer; border: none; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
         }
         
-        /* Stile per la foto cliccabile */
         .profile-img-container {
-            position: relative; width: 80px; height: 80px; margin: 0 auto 10px;
+            width: 85px; height: 85px; margin: 0 auto 10px;
         }
         .profile-img { 
-            width: 80px; height: 80px; border-radius: 50%; 
-            object-fit: cover; cursor: pointer; background: #eee;
-            border: 2px solid transparent; transition: 0.2s;
+            width: 100%; height: 100%; border-radius: 50%; 
+            object-fit: cover; cursor: pointer; background: #f0f0f0;
+            border: 2px solid #eee; transition: 0.2s;
         }
         .profile-img:hover { border-color: var(--primary); transform: scale(1.05); }
         
@@ -65,21 +70,21 @@
     </style>
 </head>
 <body>
-    <h1 style="color: #8a96d7; font-weight: 300;">Appello RD Academy</h1>
+    <h1>Appello allenamento Sabato</h1>
     
     <div class="controls">
-        <input type="text" id="firstName" placeholder="Nome">
         <input type="text" id="lastName" placeholder="Cognome">
+        <input type="text" id="firstName" placeholder="Nome">
         <button class="btn-add" onclick="addUser()">+ Aggiungi Singolo</button>
         
         <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
         <button class="btn-import" onclick="document.getElementById('excelInput').click()">📂 Carica Iscritti 2026</button>
         
-        <button class="btn-export" onclick="exportToExcel()">📊 Esporta</button>
-        <button class="btn-clear" onclick="clearData()">🗑️ Reset</button>
+        <button class="btn-export" onclick="exportToExcel()">📊 Esporta Presenze</button>
+        <button class="btn-clear" onclick="clearData()">🗑️ Reset Totale</button>
     </div>
 
-    <input type="file" id="universalPhotoInput" accept="image/*" class="hidden-input">
+    <input type="file" id="cameraInput" accept="image/*" capture="user" class="hidden-input">
 
     <input type="text" id="searchBar" placeholder="🔍 Cerca atleta..." onkeyup="filterAtleti()">
 
@@ -87,7 +92,7 @@
 
     <script>
         let participants = JSON.parse(localStorage.getItem('atleti_data')) || [];
-        let currentEditingId = null;
+        let editingUserId = null;
 
         window.onload = renderGrid;
 
@@ -110,7 +115,7 @@
                             id: Date.now() + i + Math.random(),
                             name: String(nome).trim(),
                             surname: String(cognome).trim(),
-                            photo: `https://ui-avatars.com/api/?name=${nome}+${cognome}&background=ffd8be&color=5a5a5a`,
+                            photo: `https://ui-avatars.com/api/?name=${nome}+${cognome}&background=d1d9ff&color=5a5a5a`,
                             present: false
                         });
                     }
@@ -133,7 +138,7 @@
         function addUser() {
             const name = document.getElementById('firstName').value;
             const surname = document.getElementById('lastName').value;
-            if (!name) return alert("Inserisci almeno il nome");
+            if (!name || !surname) return alert("Inserisci nome e cognome");
             
             participants.push({
                 id: Date.now(), name, surname,
@@ -141,24 +146,24 @@
                 present: false
             });
             save(); renderGrid();
-            document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
+            document.getElementById('firstName').value = ''; 
+            document.getElementById('lastName').value = '';
         }
 
-        // Funzione per gestire il clic sulla foto
-        function changePhoto(id, event) {
-            event.stopPropagation(); // Evita di segnare la presenza
-            currentEditingId = id;
-            document.getElementById('universalPhotoInput').click();
+        // Funzione per caricare la foto cliccando sul tondo
+        function openCamera(id, event) {
+            event.stopPropagation();
+            editingUserId = id;
+            document.getElementById('cameraInput').click();
         }
 
-        // Listener per quando viene scelta una nuova foto
-        document.getElementById('universalPhotoInput').onchange = function(e) {
+        document.getElementById('cameraInput').onchange = function(e) {
             const file = e.target.files[0];
-            if (!file || !currentEditingId) return;
+            if (!file || !editingUserId) return;
 
             const reader = new FileReader();
             reader.onload = function(event) {
-                const user = participants.find(p => p.id === currentEditingId);
+                const user = participants.find(p => p.id === editingUserId);
                 if (user) {
                     user.photo = event.target.result;
                     save();
@@ -176,7 +181,7 @@
 
         function removeUser(id, e) {
             e.stopPropagation();
-            if(confirm("Eliminare atleta?")) {
+            if(confirm("Eliminare definitivamente questo atleta?")) {
                 participants = participants.filter(p => p.id !== id);
                 save(); renderGrid();
             }
@@ -185,6 +190,7 @@
         function renderGrid() {
             const grid = document.getElementById('userGrid');
             grid.innerHTML = '';
+            // Ordine alfabetico per cognome
             participants.sort((a, b) => a.surname.localeCompare(b.surname)).forEach(u => {
                 const card = document.createElement('div');
                 card.className = `card ${u.present ? 'present' : ''}`;
@@ -192,22 +198,25 @@
                 card.innerHTML = `
                     <button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
                     <div class="profile-img-container">
-                        <img src="${u.photo}" class="profile-img" onclick="changePhoto(${u.id}, event)" title="Clicca per cambiare foto">
+                        <img src="${u.photo}" class="profile-img" onclick="openCamera(${u.id}, event)">
                     </div>
-                    <div style="font-weight:bold">${u.surname} ${u.name}</div>
-                    <div style="font-size:0.8em">${u.present ? '🟢 PRESENTE' : '⚪ ASSENTE'}</div>`;
+                    <div style="font-weight:bold; font-size: 0.9em;">${u.surname.toUpperCase()}</div>
+                    <div style="font-size: 0.9em;">${u.name}</div>
+                    <div style="font-size:0.7em; margin-top:5px; color: ${u.present ? '#2d5a2d' : '#999'}">
+                        ${u.present ? '● PRESENTE' : '○ ASSENTE'}
+                    </div>`;
                 grid.appendChild(card);
             });
         }
 
-        function clearData() { if(confirm("Cancellare tutta la lista?")) { participants = []; save(); renderGrid(); } }
+        function clearData() { if(confirm("Cancellare tutta la lista? Azione irreversibile.")) { participants = []; save(); renderGrid(); } }
 
         function exportToExcel() {
             const data = participants.map(p => ({ Cognome: p.surname, Nome: p.name, Stato: p.present ? 'Presente' : 'Assente' }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Presenze");
-            XLSX.writeFile(wb, `Appello_${new Date().toLocaleDateString()}.xlsx`);
+            XLSX.writeFile(wb, `Appello_Sabato_${new Date().toLocaleDateString()}.xlsx`);
         }
     </script>
 </body>
