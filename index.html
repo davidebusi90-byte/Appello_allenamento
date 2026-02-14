@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -9,9 +9,9 @@
         :root {
             --bg-color: #fdfcf0; 
             --primary: #d1d9ff;  
-            --accent: #c1e1c1;   
-            --import: #f9f1c2;    
-            --danger: #000000; /* X Nera */
+            --accent-prep: #c1e1c1; /* Verde */
+            --accent-gara: #ffd8be; /* Arancio */
+            --accent-all: #b2e2f2;  /* Azzurro */
             --text: #5a5a5a;
         }
         body {
@@ -19,8 +19,11 @@
             background-color: var(--bg-color); color: var(--text);
             margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
         }
+        #counterBox {
+            position: fixed; top: 10px; right: 10px; background: white; padding: 10px 15px;
+            border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-weight: bold; z-index: 100;
+        }
         h1 { color: #8a96d7; font-weight: 300; margin-bottom: 25px; }
-
         .controls {
             background: white; padding: 20px; border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
@@ -29,13 +32,7 @@
         }
         input, button { padding: 12px; border: 1px solid #eee; border-radius: 12px; outline: none; }
         button { cursor: pointer; border: none; font-weight: bold; color: var(--text); transition: 0.2s; }
-        .btn-add { background-color: var(--primary); }
-        .btn-import { background-color: var(--import); }
-        .btn-export { background-color: var(--accent); }
-        .btn-clear { background-color: #ffb3ba; } /* Reset rimane rosino chiaro per sicurezza */
         
-        #searchBar { width: 100%; max-width: 400px; margin-bottom: 20px; border: 2px solid var(--primary); }
-
         .grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 15px; width: 100%; max-width: 900px;
@@ -43,50 +40,46 @@
         .card {
             background: white; border-radius: 15px; padding: 15px;
             text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.03);
-            border: 3px solid transparent; position: relative; transition: 0.3s;
+            border: 4px solid transparent; position: relative; transition: 0.3s;
         }
-        .card.present { border-color: var(--accent); background-color: #f0fff0; }
+        /* Stati Cumulativi */
+        .card.stato-1 { border-color: var(--accent-prep); background-color: #f0fff0; }
+        .card.stato-2 { border-color: var(--accent-gara); background-color: #fffaf0; }
+        .card.stato-3 { border-color: var(--accent-all); background-color: #f0faff; }
         
-        /* X Nera per eliminare */
         .delete-btn {
-            position: absolute; top: 8px; right: 8px;
-            background: var(--danger); color: white;
-            border-radius: 50%; width: 20px; height: 20px;
-            font-size: 11px; cursor: pointer; border: none; z-index: 10;
-            display: flex; align-items: center; justify-content: center;
+            position: absolute; top: 5px; right: 5px;
+            background: #000; color: white; border-radius: 50%; width: 22px; height: 22px;
+            font-size: 12px; cursor: pointer; border: none; z-index: 10; display: flex; align-items: center; justify-content: center;
         }
-        
-        .profile-img-container {
-            width: 85px; height: 85px; margin: 0 auto 10px;
-        }
+        .profile-img-container { width: 85px; height: 85px; margin: 0 auto 10px; }
         .profile-img { 
             width: 100%; height: 100%; border-radius: 50%; 
-            object-fit: cover; cursor: pointer; background: #f0f0f0;
-            border: 2px solid #eee; transition: 0.2s;
+            object-fit: cover; cursor: pointer; background: #eee;
+            border: 2px solid #f0f0f0; transition: 0.2s;
         }
-        .profile-img:hover { border-color: var(--primary); transform: scale(1.05); }
-        
+        .profile-img:hover { transform: scale(1.05); border-color: var(--primary); }
         .hidden-input { display: none; }
+        #searchBar { width: 100%; max-width: 400px; margin-bottom: 20px; border: 2px solid var(--primary); }
     </style>
 </head>
 <body>
+
+    <div id="counterBox">Presenti: <span id="count">0</span></div>
     <h1>Appello allenamento Sabato</h1>
     
     <div class="controls">
         <input type="text" id="lastName" placeholder="Cognome">
         <input type="text" id="firstName" placeholder="Nome">
-        <button class="btn-add" onclick="addUser()">+ Aggiungi Singolo</button>
-        
-        <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
-        <button class="btn-import" onclick="document.getElementById('excelInput').click()">📂 Carica Iscritti 2026</button>
-        
-        <button class="btn-export" onclick="exportToExcel()">📊 Esporta Presenze</button>
-        <button class="btn-clear" onclick="clearData()">🗑️ Reset Totale</button>
+        <button onclick="addUser()" style="background: var(--primary)">+ Aggiungi</button>
+        <button onclick="document.getElementById('excelInput').click()" style="background: #f9f1c2">📂 Carica Iscritti</button>
+        <button onclick="exportToExcel()" style="background: #c1e1c1">📊 Esporta Excel</button>
+        <button onclick="clearData()" style="background: #ffb3ba">🗑️ Reset Totale</button>
     </div>
 
+    <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
     <input type="file" id="cameraInput" accept="image/*" capture="user" class="hidden-input">
-
-    <input type="text" id="searchBar" placeholder="🔍 Cerca atleta..." onkeyup="filterAtleti()">
+    <input type="text" id="searchBar" placeholder="🔍 Cerca atleta..." onkeyup="renderGrid()">
 
     <div class="grid" id="userGrid"></div>
 
@@ -96,105 +89,89 @@
 
         window.onload = renderGrid;
 
-        function save() { localStorage.setItem('atleti_data', JSON.stringify(participants)); }
+        function save() { 
+            localStorage.setItem('atleti_data', JSON.stringify(participants)); 
+            updateCounter(); 
+        }
+
+        function updateCounter() {
+            const selected = participants.filter(p => p.stato > 0).length;
+            document.getElementById('count').innerText = selected;
+        }
 
         function importAtleti(event) {
             const file = event.target.files[0];
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet);
-                
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 json.forEach((row, i) => {
+                    const cf = row['CODICE FISCALE'] || "";
                     const cognome = row['COGNOME'] || row['Cognome'] || "";
                     const nome = row['NOME'] || row['Nome'] || "";
-                    if (nome || cognome) {
+                    if(nome || cognome) {
                         participants.push({
                             id: Date.now() + i + Math.random(),
-                            name: String(nome).trim(),
-                            surname: String(cognome).trim(),
+                            cf: cf, name: nome, surname: cognome,
                             photo: `https://ui-avatars.com/api/?name=${nome}+${cognome}&background=d1d9ff&color=5a5a5a`,
-                            present: false
+                            stato: 0
                         });
                     }
                 });
                 save(); renderGrid();
-                event.target.value = "";
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function filterAtleti() {
-            const query = document.getElementById('searchBar').value.toLowerCase();
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(card => {
-                const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(query) ? "block" : "none";
-            });
-        }
-
-        function addUser() {
-            const name = document.getElementById('firstName').value;
-            const surname = document.getElementById('lastName').value;
-            if (!name || !surname) return alert("Inserisci nome e cognome");
-            
-            participants.push({
-                id: Date.now(), name, surname,
-                photo: `https://ui-avatars.com/api/?name=${name}+${surname}&background=d1d9ff&color=5a5a5a`,
-                present: false
-            });
+        function cycleStato(id) {
+            const u = participants.find(p => p.id === id);
+            u.stato = (u.stato + 1) % 4; 
             save(); renderGrid();
-            document.getElementById('firstName').value = ''; 
-            document.getElementById('lastName').value = '';
         }
 
-        // Funzione per caricare la foto cliccando sul tondo
         function openCamera(id, event) {
             event.stopPropagation();
             editingUserId = id;
             document.getElementById('cameraInput').click();
         }
 
-        document.getElementById('cameraInput').onchange = function(e) {
+        document.getElementById('cameraInput').onchange = (e) => {
             const file = e.target.files[0];
-            if (!file || !editingUserId) return;
-
+            if(!file) return;
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const user = participants.find(p => p.id === editingUserId);
-                if (user) {
-                    user.photo = event.target.result;
-                    save();
-                    renderGrid();
-                }
+            reader.onload = (ev) => {
+                const u = participants.find(p => p.id === editingUserId);
+                if(u) { u.photo = ev.target.result; save(); renderGrid(); }
             };
             reader.readAsDataURL(file);
         };
 
-        function togglePresence(id) {
-            const u = participants.find(p => p.id === id);
-            u.present = !u.present;
-            save(); renderGrid();
-        }
-
         function removeUser(id, e) {
             e.stopPropagation();
-            if(confirm("Eliminare definitivamente questo atleta?")) {
+            if(confirm("Eliminare atleta?")) {
                 participants = participants.filter(p => p.id !== id);
                 save(); renderGrid();
             }
         }
 
         function renderGrid() {
+            const query = document.getElementById('searchBar').value.toLowerCase();
             const grid = document.getElementById('userGrid');
             grid.innerHTML = '';
-            // Ordine alfabetico per cognome
-            participants.sort((a, b) => a.surname.localeCompare(b.surname)).forEach(u => {
+            
+            participants
+            .filter(u => (u.name + u.surname).toLowerCase().includes(query))
+            .sort((a, b) => a.surname.localeCompare(b.surname))
+            .forEach(u => {
                 const card = document.createElement('div');
-                card.className = `card ${u.present ? 'present' : ''}`;
-                card.onclick = () => togglePresence(u.id);
+                card.className = `card stato-${u.stato}`;
+                card.onclick = () => cycleStato(u.id);
+                
+                let label = "○ Assente";
+                if(u.stato === 1) label = "🏃 Prep. Atletica";
+                if(u.stato === 2) label = "🏃 Prep + 🏆 Gara";
+                if(u.stato === 3) label = "🏃 Prep + 🏆 Gara + 🧘 Stretch";
+
                 card.innerHTML = `
                     <button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
                     <div class="profile-img-container">
@@ -202,22 +179,42 @@
                     </div>
                     <div style="font-weight:bold; font-size: 0.9em;">${u.surname.toUpperCase()}</div>
                     <div style="font-size: 0.9em;">${u.name}</div>
-                    <div style="font-size:0.7em; margin-top:5px; color: ${u.present ? '#2d5a2d' : '#999'}">
-                        ${u.present ? '● PRESENTE' : '○ ASSENTE'}
-                    </div>`;
+                    <div style="font-size:0.6em; margin-top:5px; font-weight:bold; line-height:1.2; color: ${u.stato > 0 ? '#2d5a2d' : '#999'}">${label}</div>
+                `;
                 grid.appendChild(card);
             });
+            updateCounter();
         }
 
-        function clearData() { if(confirm("Cancellare tutta la lista? Azione irreversibile.")) { participants = []; save(); renderGrid(); } }
-
         function exportToExcel() {
-            const data = participants.map(p => ({ Cognome: p.surname, Nome: p.name, Stato: p.present ? 'Presente' : 'Assente' }));
+            const data = participants.map(p => ({
+                Cognome: p.surname,
+                Nome: p.name,
+                "Preparazione Atletica": p.stato >= 1 ? "SI" : "NO",
+                "Prova di Gara": p.stato >= 2 ? "SI" : "NO",
+                "Stretching": p.stato >= 3 ? "SI" : "NO"
+            }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Presenze");
+            XLSX.utils.book_append_sheet(wb, ws, "Appello");
             XLSX.writeFile(wb, `Appello_Sabato_${new Date().toLocaleDateString()}.xlsx`);
+        }
+
+        function clearData() { if(confirm("Resettare tutto?")) { participants = []; save(); renderGrid(); } }
+
+        function addUser() {
+            const n = document.getElementById('firstName').value;
+            const s = document.getElementById('lastName').value;
+            if(!n || !s) return alert("Mancano dati");
+            participants.push({
+                id: Date.now(), name: n, surname: s, cf: "",
+                photo: `https://ui-avatars.com/api/?name=${n}+${s}&background=d1d9ff&color=5a5a5a`,
+                stato: 0
+            });
+            save(); renderGrid();
+            document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
         }
     </script>
 </body>
 </html>
+
