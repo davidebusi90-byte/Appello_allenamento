@@ -42,13 +42,25 @@
             border: 3px solid transparent; position: relative; transition: 0.3s;
         }
         .card.present { border-color: var(--accent); background-color: #f0fff0; }
+        
         .delete-btn {
             position: absolute; top: 5px; right: 5px;
             background: var(--danger); color: white;
             border-radius: 50%; width: 22px; height: 22px;
-            font-size: 12px; cursor: pointer; border: none;
+            font-size: 12px; cursor: pointer; border: none; z-index: 10;
         }
-        .profile-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; background: #eee; }
+        
+        /* Stile per la foto cliccabile */
+        .profile-img-container {
+            position: relative; width: 80px; height: 80px; margin: 0 auto 10px;
+        }
+        .profile-img { 
+            width: 80px; height: 80px; border-radius: 50%; 
+            object-fit: cover; cursor: pointer; background: #eee;
+            border: 2px solid transparent; transition: 0.2s;
+        }
+        .profile-img:hover { border-color: var(--primary); transform: scale(1.05); }
+        
         .hidden-input { display: none; }
     </style>
 </head>
@@ -58,9 +70,7 @@
     <div class="controls">
         <input type="text" id="firstName" placeholder="Nome">
         <input type="text" id="lastName" placeholder="Cognome">
-        <input type="file" id="photoInput" accept="image/*" class="hidden-input">
-        <button onclick="document.getElementById('photoInput').click()">📸 Foto</button>
-        <button class="btn-add" onclick="addUser()">+ Aggiungi</button>
+        <button class="btn-add" onclick="addUser()">+ Aggiungi Singolo</button>
         
         <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
         <button class="btn-import" onclick="document.getElementById('excelInput').click()">📂 Carica Iscritti 2026</button>
@@ -69,12 +79,16 @@
         <button class="btn-clear" onclick="clearData()">🗑️ Reset</button>
     </div>
 
-    <input type="text" id="searchBar" placeholder="🔍 Cerca atleta per nome o cognome..." onkeyup="filterAtleti()">
+    <input type="file" id="universalPhotoInput" accept="image/*" class="hidden-input">
+
+    <input type="text" id="searchBar" placeholder="🔍 Cerca atleta..." onkeyup="filterAtleti()">
 
     <div class="grid" id="userGrid"></div>
 
     <script>
         let participants = JSON.parse(localStorage.getItem('atleti_data')) || [];
+        let currentEditingId = null;
+
         window.onload = renderGrid;
 
         function save() { localStorage.setItem('atleti_data', JSON.stringify(participants)); }
@@ -89,10 +103,8 @@
                 const json = XLSX.utils.sheet_to_json(sheet);
                 
                 json.forEach((row, i) => {
-                    // Mappatura specifica per il tuo file: COGNOME e NOME
                     const cognome = row['COGNOME'] || row['Cognome'] || "";
                     const nome = row['NOME'] || row['Nome'] || "";
-                    
                     if (nome || cognome) {
                         participants.push({
                             id: Date.now() + i + Math.random(),
@@ -122,20 +134,39 @@
             const name = document.getElementById('firstName').value;
             const surname = document.getElementById('lastName').value;
             if (!name) return alert("Inserisci almeno il nome");
-            const photoFile = document.getElementById('photoInput').files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                participants.push({
-                    id: Date.now(), name, surname,
-                    photo: e.target.result || `https://ui-avatars.com/api/?name=${name}+${surname}&background=d1d9ff&color=5a5a5a`,
-                    present: false
-                });
-                save(); renderGrid();
-                document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
-            };
-            if (photoFile) reader.readAsDataURL(photoFile);
-            else reader.onload({ target: { result: null } });
+            
+            participants.push({
+                id: Date.now(), name, surname,
+                photo: `https://ui-avatars.com/api/?name=${name}+${surname}&background=d1d9ff&color=5a5a5a`,
+                present: false
+            });
+            save(); renderGrid();
+            document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
         }
+
+        // Funzione per gestire il clic sulla foto
+        function changePhoto(id, event) {
+            event.stopPropagation(); // Evita di segnare la presenza
+            currentEditingId = id;
+            document.getElementById('universalPhotoInput').click();
+        }
+
+        // Listener per quando viene scelta una nuova foto
+        document.getElementById('universalPhotoInput').onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file || !currentEditingId) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const user = participants.find(p => p.id === currentEditingId);
+                if (user) {
+                    user.photo = event.target.result;
+                    save();
+                    renderGrid();
+                }
+            };
+            reader.readAsDataURL(file);
+        };
 
         function togglePresence(id) {
             const u = participants.find(p => p.id === id);
@@ -158,8 +189,11 @@
                 const card = document.createElement('div');
                 card.className = `card ${u.present ? 'present' : ''}`;
                 card.onclick = () => togglePresence(u.id);
-                card.innerHTML = `<button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
-                    <img src="${u.photo}" class="profile-img">
+                card.innerHTML = `
+                    <button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
+                    <div class="profile-img-container">
+                        <img src="${u.photo}" class="profile-img" onclick="changePhoto(${u.id}, event)" title="Clicca per cambiare foto">
+                    </div>
                     <div style="font-weight:bold">${u.surname} ${u.name}</div>
                     <div style="font-size:0.8em">${u.present ? '🟢 PRESENTE' : '⚪ ASSENTE'}</div>`;
                 grid.appendChild(card);
