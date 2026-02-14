@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appello Atleti Pastel</title>
+    <title>Appello RD Academy</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -20,15 +20,18 @@
         .controls {
             background: white; padding: 20px; border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            margin-bottom: 30px; display: flex; gap: 10px;
-            flex-wrap: wrap; justify-content: center;
+            margin-bottom: 20px; display: flex; gap: 10px;
+            flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px;
         }
         input, button { padding: 12px; border: 1px solid #eee; border-radius: 12px; outline: none; }
         button { cursor: pointer; border: none; font-weight: bold; color: var(--text); transition: 0.2s; }
         .btn-add { background-color: var(--primary); }
-        .btn-export { background-color: var(--accent); }
         .btn-import { background-color: var(--import); }
+        .btn-export { background-color: var(--accent); }
         .btn-clear { background-color: var(--danger); }
+        
+        #searchBar { width: 100%; max-width: 400px; margin-bottom: 20px; border: 2px solid var(--primary); }
+
         .grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 15px; width: 100%; max-width: 900px;
@@ -36,7 +39,7 @@
         .card {
             background: white; border-radius: 15px; padding: 15px;
             text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.03);
-            border: 3px solid transparent; position: relative;
+            border: 3px solid transparent; position: relative; transition: 0.3s;
         }
         .card.present { border-color: var(--accent); background-color: #f0fff0; }
         .delete-btn {
@@ -45,23 +48,29 @@
             border-radius: 50%; width: 22px; height: 22px;
             font-size: 12px; cursor: pointer; border: none;
         }
-        .profile-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; background: #eee; }
         .hidden-input { display: none; }
     </style>
 </head>
 <body>
-    <h1 style="color: #8a96d7; font-weight: 300;">Appello Atleti</h1>
+    <h1 style="color: #8a96d7; font-weight: 300;">Appello RD Academy</h1>
+    
     <div class="controls">
         <input type="text" id="firstName" placeholder="Nome">
         <input type="text" id="lastName" placeholder="Cognome">
         <input type="file" id="photoInput" accept="image/*" class="hidden-input">
         <button onclick="document.getElementById('photoInput').click()">📸 Foto</button>
         <button class="btn-add" onclick="addUser()">+ Aggiungi</button>
+        
         <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
-        <button class="btn-import" onclick="document.getElementById('excelInput').click()">📂 Carica Excel</button>
+        <button class="btn-import" onclick="document.getElementById('excelInput').click()">📂 Carica Iscritti 2026</button>
+        
         <button class="btn-export" onclick="exportToExcel()">📊 Esporta</button>
         <button class="btn-clear" onclick="clearData()">🗑️ Reset</button>
     </div>
+
+    <input type="text" id="searchBar" placeholder="🔍 Cerca atleta per nome o cognome..." onkeyup="filterAtleti()">
+
     <div class="grid" id="userGrid"></div>
 
     <script>
@@ -69,14 +78,6 @@
         window.onload = renderGrid;
 
         function save() { localStorage.setItem('atleti_data', JSON.stringify(participants)); }
-
-        function findValue(row, targets) {
-            for (let key in row) {
-                let k = key.toLowerCase().trim();
-                if (targets.includes(k)) return row[key];
-            }
-            return null;
-        }
 
         function importAtleti(event) {
             const file = event.target.files[0];
@@ -88,14 +89,16 @@
                 const json = XLSX.utils.sheet_to_json(sheet);
                 
                 json.forEach((row, i) => {
-                    const n = findValue(row, ['nome', 'name', 'first name', 'atleta', 'nominativo']);
-                    const s = findValue(row, ['cognome', 'surname', 'last name']);
-                    if (n) {
+                    // Mappatura specifica per il tuo file: COGNOME e NOME
+                    const cognome = row['COGNOME'] || row['Cognome'] || "";
+                    const nome = row['NOME'] || row['Nome'] || "";
+                    
+                    if (nome || cognome) {
                         participants.push({
                             id: Date.now() + i + Math.random(),
-                            name: String(n).trim(),
-                            surname: s ? String(s).trim() : "",
-                            photo: `https://ui-avatars.com/api/?name=${n}+${s || ''}&background=ffd8be&color=5a5a5a`,
+                            name: String(nome).trim(),
+                            surname: String(cognome).trim(),
+                            photo: `https://ui-avatars.com/api/?name=${nome}+${cognome}&background=ffd8be&color=5a5a5a`,
                             present: false
                         });
                     }
@@ -104,6 +107,15 @@
                 event.target.value = "";
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        function filterAtleti() {
+            const query = document.getElementById('searchBar').value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(query) ? "block" : "none";
+            });
         }
 
         function addUser() {
@@ -119,8 +131,7 @@
                     present: false
                 });
                 save(); renderGrid();
-                document.getElementById('firstName').value = '';
-                document.getElementById('lastName').value = '';
+                document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
             };
             if (photoFile) reader.readAsDataURL(photoFile);
             else reader.onload({ target: { result: null } });
@@ -143,26 +154,26 @@
         function renderGrid() {
             const grid = document.getElementById('userGrid');
             grid.innerHTML = '';
-            participants.forEach(u => {
+            participants.sort((a, b) => a.surname.localeCompare(b.surname)).forEach(u => {
                 const card = document.createElement('div');
                 card.className = `card ${u.present ? 'present' : ''}`;
                 card.onclick = () => togglePresence(u.id);
                 card.innerHTML = `<button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
                     <img src="${u.photo}" class="profile-img">
-                    <div style="font-weight:bold">${u.name} ${u.surname}</div>
-                    <div style="font-size:0.8em">${u.present ? '🟢 Presente' : '⚪ Assente'}</div>`;
+                    <div style="font-weight:bold">${u.surname} ${u.name}</div>
+                    <div style="font-size:0.8em">${u.present ? '🟢 PRESENTE' : '⚪ ASSENTE'}</div>`;
                 grid.appendChild(card);
             });
         }
 
-        function clearData() { if(confirm("Cancellare tutto?")) { participants = []; save(); renderGrid(); } }
+        function clearData() { if(confirm("Cancellare tutta la lista?")) { participants = []; save(); renderGrid(); } }
 
         function exportToExcel() {
-            const data = participants.map(p => ({ Nome: p.name, Cognome: p.surname, Stato: p.present ? 'Presente' : 'Assente' }));
+            const data = participants.map(p => ({ Cognome: p.surname, Nome: p.name, Stato: p.present ? 'Presente' : 'Assente' }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Appello");
-            XLSX.writeFile(wb, "Presenze.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Presenze");
+            XLSX.writeFile(wb, `Appello_${new Date().toLocaleDateString()}.xlsx`);
         }
     </script>
 </body>
