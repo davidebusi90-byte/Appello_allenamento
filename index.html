@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -41,8 +41,8 @@
             background: white; border-radius: 15px; padding: 15px;
             text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.03);
             border: 4px solid transparent; position: relative; transition: 0.3s;
+            cursor: pointer;
         }
-        /* Stati Cumulativi */
         .card.stato-1 { border-color: var(--accent-prep); background-color: #f0fff0; }
         .card.stato-2 { border-color: var(--accent-gara); background-color: #fffaf0; }
         .card.stato-3 { border-color: var(--accent-all); background-color: #f0faff; }
@@ -52,13 +52,13 @@
             background: #000; color: white; border-radius: 50%; width: 22px; height: 22px;
             font-size: 12px; cursor: pointer; border: none; z-index: 10; display: flex; align-items: center; justify-content: center;
         }
-        .profile-img-container { width: 85px; height: 85px; margin: 0 auto 10px; }
+        .profile-img-container { width: 85px; height: 85px; margin: 0 auto 10px; pointer-events: auto; }
         .profile-img { 
             width: 100%; height: 100%; border-radius: 50%; 
-            object-fit: cover; cursor: pointer; background: #eee;
+            object-fit: cover; cursor: pointer; background: #e0e0e0;
             border: 2px solid #f0f0f0; transition: 0.2s;
         }
-        .profile-img:hover { transform: scale(1.05); border-color: var(--primary); }
+        .profile-img:hover { border-color: var(--primary); }
         .hidden-input { display: none; }
         #searchBar { width: 100%; max-width: 400px; margin-bottom: 20px; border: 2px solid var(--primary); }
     </style>
@@ -74,7 +74,7 @@
         <button onclick="addUser()" style="background: var(--primary)">+ Aggiungi</button>
         <button onclick="document.getElementById('excelInput').click()" style="background: #f9f1c2">📂 Carica Iscritti</button>
         <button onclick="exportToExcel()" style="background: #c1e1c1">📊 Esporta Excel</button>
-        <button onclick="clearData()" style="background: #ffb3ba">🗑️ Reset Totale</button>
+        <button onclick="clearData()" style="background: #ffb3ba">🗑️ Reset</button>
     </div>
 
     <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden-input" onchange="importAtleti(event)">
@@ -86,6 +86,7 @@
     <script>
         let participants = JSON.parse(localStorage.getItem('atleti_data')) || [];
         let editingUserId = null;
+        const defaultAvatar = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2FhYSI+PHBhdGggZD0iTTEyIDJDMiAyIDIgMTAgMiAxMEMyIDEzIDIgMTUgNyAxNVM3IDIyIDEyIDIyUzE3IDE4IDE3IDE1QzIyIDE1IDIyIDEzIDIyIDEwQzIyIDEwIDIyIDIgMTIgMlpNMTIgMThjLTIuNjkgMC01Ljc3IDEuMjgtNiAxLjkzVjIwSDE4di0uMDdDMTcuNzcgMTkuMjggMTQuNjkgMTggMTIgMTh6TTEyIDVjMS42NiAwIDMgMS4zNCAzIDNzLTEuMzQgMy0zIDMtMy0xLjM0LTMtMyAxLjM0LTMgMy0zWiIvPjwvc3ZnPg==";
 
         window.onload = renderGrid;
 
@@ -95,8 +96,7 @@
         }
 
         function updateCounter() {
-            const selected = participants.filter(p => p.stato > 0).length;
-            document.getElementById('count').innerText = selected;
+            document.getElementById('count').innerText = participants.filter(p => p.stato > 0).length;
         }
 
         function importAtleti(event) {
@@ -106,14 +106,13 @@
                 const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 json.forEach((row, i) => {
-                    const cf = row['CODICE FISCALE'] || "";
                     const cognome = row['COGNOME'] || row['Cognome'] || "";
                     const nome = row['NOME'] || row['Nome'] || "";
                     if(nome || cognome) {
                         participants.push({
                             id: Date.now() + i + Math.random(),
-                            cf: cf, name: nome, surname: cognome,
-                            photo: `https://ui-avatars.com/api/?name=${nome}+${cognome}&background=d1d9ff&color=5a5a5a`,
+                            name: nome, surname: cognome,
+                            photo: null,
                             stato: 0
                         });
                     }
@@ -124,13 +123,13 @@
         }
 
         function cycleStato(id) {
-            const u = participants.find(p => p.id === id);
-            u.stato = (u.stato + 1) % 4; 
+            const index = participants.findIndex(p => p.id === id);
+            participants[index].stato = (participants[index].stato + 1) % 4; 
             save(); renderGrid();
         }
 
         function openCamera(id, event) {
-            event.stopPropagation();
+            event.stopPropagation(); // Impedisce il cambio stato quando clicchi la foto
             editingUserId = id;
             document.getElementById('cameraInput').click();
         }
@@ -140,8 +139,11 @@
             if(!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const u = participants.find(p => p.id === editingUserId);
-                if(u) { u.photo = ev.target.result; save(); renderGrid(); }
+                const index = participants.findIndex(p => p.id === editingUserId);
+                if(index !== -1) {
+                    participants[index].photo = ev.target.result;
+                    save(); renderGrid();
+                }
             };
             reader.readAsDataURL(file);
         };
@@ -160,7 +162,7 @@
             grid.innerHTML = '';
             
             participants
-            .filter(u => (u.name + u.surname).toLowerCase().includes(query))
+            .filter(u => (u.name + " " + u.surname).toLowerCase().includes(query))
             .sort((a, b) => a.surname.localeCompare(b.surname))
             .forEach(u => {
                 const card = document.createElement('div');
@@ -168,18 +170,18 @@
                 card.onclick = () => cycleStato(u.id);
                 
                 let label = "○ Assente";
-                if(u.stato === 1) label = "🏃 Prep. Atletica";
-                if(u.stato === 2) label = "🏃 Prep + 🏆 Gara";
-                if(u.stato === 3) label = "🏃 Prep + 🏆 Gara + 🧘 Stretch";
+                if(u.stato === 1) label = "🏃 Prep.";
+                if(u.stato === 2) label = "🏃 Prep. + 🏆 Gara";
+                if(u.stato === 3) label = "🏃 + 🏆 + 🧘 Stretch";
 
                 card.innerHTML = `
                     <button class="delete-btn" onclick="removeUser(${u.id}, event)">✕</button>
                     <div class="profile-img-container">
-                        <img src="${u.photo}" class="profile-img" onclick="openCamera(${u.id}, event)">
+                        <img src="${u.photo || defaultAvatar}" class="profile-img" onclick="openCamera(${u.id}, event)">
                     </div>
                     <div style="font-weight:bold; font-size: 0.9em;">${u.surname.toUpperCase()}</div>
                     <div style="font-size: 0.9em;">${u.name}</div>
-                    <div style="font-size:0.6em; margin-top:5px; font-weight:bold; line-height:1.2; color: ${u.stato > 0 ? '#2d5a2d' : '#999'}">${label}</div>
+                    <div style="font-size:0.6em; margin-top:5px; font-weight:bold; color: #555">${label}</div>
                 `;
                 grid.appendChild(card);
             });
@@ -197,19 +199,17 @@
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Appello");
-            XLSX.writeFile(wb, `Appello_Sabato_${new Date().toLocaleDateString()}.xlsx`);
+            XLSX.writeFile(wb, `Appello_Allenamento.xlsx`);
         }
 
-        function clearData() { if(confirm("Resettare tutto?")) { participants = []; save(); renderGrid(); } }
+        function clearData() { if(confirm("Cancellare tutto?")) { participants = []; save(); renderGrid(); } }
 
         function addUser() {
             const n = document.getElementById('firstName').value;
             const s = document.getElementById('lastName').value;
             if(!n || !s) return alert("Mancano dati");
             participants.push({
-                id: Date.now(), name: n, surname: s, cf: "",
-                photo: `https://ui-avatars.com/api/?name=${n}+${s}&background=d1d9ff&color=5a5a5a`,
-                stato: 0
+                id: Date.now(), name: n, surname: s, photo: null, stato: 0
             });
             save(); renderGrid();
             document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
@@ -217,4 +217,5 @@
     </script>
 </body>
 </html>
+
 
